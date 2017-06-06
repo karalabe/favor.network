@@ -75,7 +75,7 @@ func TestRequestCreation(t *testing.T) {
 			}
 			if req, err := favornet.GetRequestAt(nil, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(int64(i))); err != nil {
 				t.Fatalf("iter %d, key %d: failed to retrieve request struct: %v", i, j, err)
-			} else if req.From != (common.Address{byte(i), byte(j)}) || req.Favor != fmt.Sprintf("%d.%d", i, j) || req.Bound != false || req.Reward.Uint64() != 0 {
+			} else if req.Id.Uint64() != uint64(5*i+j+1) || req.From != (common.Address{byte(i), byte(j)}) || req.Favor != fmt.Sprintf("%d.%d", i, j) || req.Bound != false || req.Reward.Uint64() != 0 {
 				t.Fatalf("iter %d, key %d: request struct mismatch: have %+v", i, j, req)
 			}
 		}
@@ -117,6 +117,12 @@ func TestRequestDeletion(t *testing.T) {
 		favornet.DropRequest(bind.NewKeyedTransactor(key), index, req.Id)
 		sim.Commit()
 
+		// Ensure the request is deleted from all pools
+		if req, err := favornet.GetRequest(nil, req.Id); err != nil {
+			t.Fatalf("left %d: failed to retrieve deleted request: %v", len(left), err)
+		} else if req.Favor != "" {
+			t.Fatalf("left %d: deleted request still lingering: %+v", len(left), req)
+		}
 		// Ensure the remainding requests are what we expect
 		if reqs, err := favornet.GetRequestCount(nil, crypto.PubkeyToAddress(key.PublicKey)); err != nil {
 			t.Fatalf("left %d: failed to retrieve request count: %v", len(left), err)
@@ -193,5 +199,142 @@ func TestRequestAcceptance(t *testing.T) {
 		t.Fatalf("failed to retrieve request count: %v", err)
 	} else if reqs.Uint64() != uint64(1) {
 		t.Fatalf("request count mismatch: have %v, want %v", reqs, 1)
+	}
+}
+
+// Tests that favor requests can be closed both without an explicit promise as
+// the reward (creating a new one) as well as by transferring ownership of an
+// already existing one.
+func TestRequestHonouring(t *testing.T) {
+	// Prefund two accounts to rotate a favor in between
+	alice, _ := crypto.GenerateKey()
+	bob, _ := crypto.GenerateKey()
+
+	_, favornet, sim := setupFavornetTest(t, alice, bob)
+
+	// Create a request with Alice and bind it with Bob
+	if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(alice), crypto.PubkeyToAddress(bob.PublicKey), "Hello, Favor!", new(big.Int)); err != nil {
+		t.Fatalf("failed to create favor request transaction: %v", err)
+	}
+	if _, err := favornet.AcceptRequest(bind.NewKeyedTransactor(bob), crypto.PubkeyToAddress(alice.PublicKey), big.NewInt(0), big.NewInt(1)); err != nil {
+		t.Fatalf("failed to create acceptance transaction: %v", err)
+	}
+	sim.Commit()
+
+	// Make sure Bob has no promises from others before an honour is made
+	if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
+		t.Fatalf("failed to retrieve promise count: %v", err)
+	} else if proms.Uint64() != uint64(0) {
+		t.Fatalf("promise count mismatch: have %v, want %v", proms, 0)
+	}
+	// Close the request and verify the creation of a new promise to honour it
+	if _, err := favornet.HonourRequest(bind.NewKeyedTransactor(alice), big.NewInt(0), big.NewInt(1), big.NewInt(0)); err != nil {
+		t.Fatalf("failed to create favor honour transaction: %v", err)
+	}
+	sim.Commit()
+
+	// Make sure the request is gone and a new promise created instead
+	if reqs, err := favornet.GetRequestCount(nil, crypto.PubkeyToAddress(alice.PublicKey)); err != nil {
+		t.Fatalf("failed to retrieve request count: %v", err)
+	} else if reqs.Uint64() != uint64(0) {
+		t.Fatalf("request count mismatch: have %v, want %v", reqs, 0)
+	}
+	if req, err := favornet.GetRequest(nil, big.NewInt(1)); err != nil {
+		t.Fatalf("failed to retrieve honoured request: %v", err)
+	} else if req.Favor != "" {
+		t.Fatalf("honoured request still lingering: %+v", req)
+	}
+
+	if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
+		t.Fatalf("failed to retrieve promise count: %v", err)
+	} else if proms.Uint64() != uint64(1) {
+		t.Fatalf("promise count mismatch: have %v, want %v", proms, 1)
+	}
+	if promise, err := favornet.GetPromiseAt(nil, crypto.PubkeyToAddress(bob.PublicKey), big.NewInt(0)); err != nil {
+		t.Fatalf("failed to retrieve promise: %v", err)
+	} else if promise.Id.Uint64() != uint64(1) || promise.Owner != crypto.PubkeyToAddress(bob.PublicKey) || promise.From != crypto.PubkeyToAddress(alice.PublicKey) || promise.Favor != "Hello, Favor!" || promise.Offered {
+		t.Fatalf("created promise struct mismatch: have %+v", promise)
+	}
+	// Repeat the same test but with the existing promise as a reward
+	{
+		// Create a request with Bob and bind it with Alice. Note, we set a reward now too!
+		if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(bob), crypto.PubkeyToAddress(alice.PublicKey), "Hello, Favor 2!", big.NewInt(1)); err != nil {
+			t.Fatalf("failed to create favor request transaction: %v", err)
+		}
+		if _, err := favornet.AcceptRequest(bind.NewKeyedTransactor(alice), crypto.PubkeyToAddress(bob.PublicKey), big.NewInt(0), big.NewInt(2)); err != nil {
+			t.Fatalf("failed to create acceptance transaction: %v", err)
+		}
+		sim.Commit()
+
+		// Make sure Bob cannot offer the same reward to someone else, nor destroy it
+		if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(bob), crypto.PubkeyToAddress(alice.PublicKey), "Hello, Favor 3!", big.NewInt(1)); err != nil {
+			t.Fatalf("failed to create favor request transaction: %v", err)
+		}
+		sim.Commit()
+
+		if _, err := favornet.DropPromise(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(1)); err != nil {
+			t.Fatalf("failed to create promise drop transaction: %v", err)
+		}
+		sim.Commit()
+
+		if reqs, err := favornet.GetRequestCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve request count: %v", err)
+		} else if reqs.Uint64() != uint64(1) {
+			t.Fatalf("request count mismatch: have %v, want %v", reqs, 1)
+		}
+		if reqs, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve promise count: %v", err)
+		} else if reqs.Uint64() != uint64(1) {
+			t.Fatalf("promise count mismatch: have %v, want %v", reqs, 1)
+		}
+		// Make sure Alice has no promises from others before an honour is made
+		if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(alice.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve promise count: %v", err)
+		} else if proms.Uint64() != uint64(0) {
+			t.Fatalf("promise count mismatch: have %v, want %v", proms, 0)
+		}
+		// Close the request and verify the creation of a new promise to honour it
+		if _, err := favornet.HonourRequest(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(2), big.NewInt(0)); err != nil {
+			t.Fatalf("failed to create favor honour transaction: %v", err)
+		}
+		sim.Commit()
+
+		// Make sure the request is gone and the existing promise transferred instead
+		if reqs, err := favornet.GetRequestCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve request count: %v", err)
+		} else if reqs.Uint64() != uint64(0) {
+			t.Fatalf("request count mismatch: have %v, want %v", reqs, 0)
+		}
+		if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(alice.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve promise count: %v", err)
+		} else if proms.Uint64() != uint64(1) {
+			t.Fatalf("promise count mismatch: have %v, want %v", proms, 1)
+		}
+		if promise, err := favornet.GetPromiseAt(nil, crypto.PubkeyToAddress(alice.PublicKey), big.NewInt(0)); err != nil {
+			t.Fatalf("failed to retrieve promise: %v", err)
+		} else if promise.Id.Uint64() != uint64(1) || promise.Owner != crypto.PubkeyToAddress(alice.PublicKey) || promise.From != crypto.PubkeyToAddress(alice.PublicKey) || promise.Favor != "Hello, Favor!" || promise.Offered {
+			t.Fatalf("transferred promise struct mismatch: have %+v", promise)
+		}
+		if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve promise count: %v", err)
+		} else if proms.Uint64() != uint64(0) {
+			t.Fatalf("promise count mismatch: have %v, want %v", proms, 0)
+		}
+		// Alice having a non reserved promise must be able to destroy it
+		if _, err := favornet.DropPromise(bind.NewKeyedTransactor(alice), big.NewInt(0), big.NewInt(1)); err != nil {
+			t.Fatalf("failed to create promise drop transaction: %v", err)
+		}
+		sim.Commit()
+
+		if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(alice.PublicKey)); err != nil {
+			t.Fatalf("failed to retrieve promise count: %v", err)
+		} else if proms.Uint64() != uint64(0) {
+			t.Fatalf("promise count mismatch: have %v, want %v", proms, 0)
+		}
+		if prom, err := favornet.GetPromise(nil, big.NewInt(1)); err != nil {
+			t.Fatalf("failed to retrieve deleted promise: %v", err)
+		} else if prom.Favor != "" {
+			t.Fatalf("deleted promise still lingering: %+v", prom)
+		}
 	}
 }
