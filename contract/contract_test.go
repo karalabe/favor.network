@@ -266,14 +266,9 @@ func TestRequestHonouring(t *testing.T) {
 		}
 		sim.Commit()
 
-		// Make sure Bob cannot offer the same reward to someone else, nor destroy it
+		// Make sure Bob cannot offer the same reward to someone else
 		if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(bob), crypto.PubkeyToAddress(alice.PublicKey), "Hello, Favor 3!", big.NewInt(1)); err != nil {
 			t.Fatalf("failed to create favor request transaction: %v", err)
-		}
-		sim.Commit()
-
-		if _, err := favornet.DropPromise(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(1)); err != nil {
-			t.Fatalf("failed to create promise drop transaction: %v", err)
 		}
 		sim.Commit()
 
@@ -282,6 +277,12 @@ func TestRequestHonouring(t *testing.T) {
 		} else if reqs.Uint64() != uint64(1) {
 			t.Fatalf("request count mismatch: have %v, want %v", reqs, 1)
 		}
+		// Make sure Bob cannot destroy a reward already locked into a request
+		if _, err := favornet.DropPromise(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(1)); err != nil {
+			t.Fatalf("failed to create promise drop transaction: %v", err)
+		}
+		sim.Commit()
+
 		if reqs, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(bob.PublicKey)); err != nil {
 			t.Fatalf("failed to retrieve promise count: %v", err)
 		} else if reqs.Uint64() != uint64(1) {
