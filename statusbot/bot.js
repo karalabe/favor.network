@@ -13,6 +13,20 @@ var favornet = web3.eth.contract(favornetABI).at(favornetAddress);
 // contexts providing it are not accessible in suggestions...
 var address;
 
+// suggestionsContainerStyle is a simple style to make displaying suggestions
+// nicer.
+function suggestionsContainerStyle(count) {
+  return {
+    marginVertical: 1,
+    marginHorizontal: 0,
+    keyboardShouldPersistTaps: "always",
+    height: Math.min(150, (56 * count)),
+    backgroundColor: "white",
+    borderRadius: 5,
+    flexGrow: 1
+  };
+}
+
 // The init listener simply pushes some nice messages to the user to make the
 // whole experience a bit friendlier.
 status.addListener("init",
@@ -43,9 +57,9 @@ status.command({
     // Yup, favors everywhere
     for (var i = 0; i < requests; i++) {
       var request = favornet.GetRequestAt("0x" + context.from, i);
-      var state = "They have not */accept*-ed the favor request yet so you can still */drop* it."
+      var state = "They have *not accepted* the favor request yet so you can still */drop* it."
       if (request[3]) {
-        state = "Accepted, honor or challenge it."
+        state = "They have *accepted* the favor request, you can only */honor* or */challenge* it."
       }
       status.sendMessage("Asking *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "* for\n\n~" + request[2] + "~\n\n" + state);
     }
@@ -86,18 +100,8 @@ status.command({
   }
 });
 
-function suggestionsContainerStyle(suggestionsCount) {
-    return {
-        marginVertical: 1,
-        marginHorizontal: 0,
-        keyboardShouldPersistTaps: "always",
-        height: Math.min(150, (56 * suggestionsCount)),
-        backgroundColor: "white",
-        borderRadius: 5,
-        flexGrow: 1
-    };
-}
-
+// dropSuggestions pre-fills the suggestion box with unaccepted favor requests
+// that the user may drop out of the block-chain.
 function dropSuggestions() {
   // Find all the dropable favor requests
   var requests = favornet.GetRequestCount("0x" + address);
@@ -128,7 +132,6 @@ function dropSuggestions() {
   // Give back the whole thing inside an object.
   return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
 }
-
 
 // The favors command lists all of the favors currently promised to me.
 status.command({
@@ -162,23 +165,133 @@ status.command({
   title: "Favor Network",
   description: "Request, accept and fulfill favors",
   color: "#2c3e50",
-  params: [{
-    name: "favor",
-    type: status.types.TEXT,
-    placeholder: "Favor you'd like to ask"
-  }]
+  params: [
+    {
+      name: "action",
+      type: status.types.TEXT,
+      suggestions: globalSuggestions,
+    },
+    {
+      name: "favor",
+      type: status.types.TEXT,
+      placeholder: "Favor you would like to ask"
+    }
+  ]
   sequentialParams: true,
   preview: function (params, context) {
-    var text = status.components.text({}, "Requesting favor: " + params.favor);
+    var text;
+    if (params.action == "ask" || params.action.indexOf("offer-") === 0) {
+      text = status.components.text({}, "Requesting favor: " + params.favor);
+    } else {
+      text = status.components.text({}, "Accepting favor request: " + params.favor);
+    }
     return {markup: status.components.view({}, [text])};
   },
   handler: function (params, context) {
-    favornet.MakeRequest.sendTransaction("0x" + context.to, params.favor, "0x0", {from: context.from}, function (error, hash) {
-      if (error) {
-        status.sendMessage("Favor request denied due to ~" + error + "~.");
-      } else {
-        status.sendMessage("Asked *0x" + context.to.substring(0, 6) + "…" + context.to.substring(34, 40) + "* for\n\n~" + params.favor + "~\n\nhttps://ropsten.etherscan.io/tx/" + hash)
+    // If we're asking for a favor, inject and return
+    if (params.action == "ask" || params.action.indexOf("offer-") === 0) {
+      var reward = 0;
+      if (params.action.indexOf("offer-") === 0) {
+        reward = params.action.substring(6);
       }
-    });
-  },
+      favornet.MakeRequest.sendTransaction("0x" + context.to, params.favor, reward, {from: context.from}, function (error, hash) {
+        if (error) {
+          status.sendMessage("Favor request denied due to ~" + error + "~.");
+        } else {
+          status.sendMessage("Asked *0x" + context.to.substring(0, 6) + "…" + context.to.substring(34, 40) + "* for\n\n~" + params.favor + "~\n\nhttps://ropsten.etherscan.io/tx/" + hash)
+        }
+      });
+      return;
+    }
+    // Apparently we're accepting a favor request, find it's index and bind
+    var id = params.action.substring(7);
+
+    var requests = favornet.GetRequestCount("0x" + context.to);
+    for (var i = 0; i < requests; i++) {
+      var request = favornet.GetRequestAt("0x" + context.to, i);
+      if (request[0] == id) {
+        favornet.AcceptRequest.sendTransaction("0x" + context.to, i, id, {from: context.from}, function (error, hash) {
+          if (error) {
+            status.sendMessage("Favor request acceptance denied due to ~" + error + "~.");
+          } else {
+            status.sendMessage("Accepted *0x" + context.to.substring(0, 6) + "…" + context.to.substring(34, 40) + "*:\n\n~" + request[2] + "~\n\nhttps://ropsten.etherscan.io/tx/" + hash)
+          }
+        });
+      }
+    }
+  }
 });
+
+// globalSuggestions pre-fills the suggestion box with a few global actions that
+// the user can do with the chat box, namely asking for a new favor or accepting
+// a favor request.
+function globalSuggestions(params, context) {
+  // Find all the acceptable favor requests
+  var requests = favornet.GetRequestCount("0x" + context.to);
+
+  var acceptable = [];
+  for (var i = 0; i < requests; i++) {
+    var request = favornet.GetRequestAt("0x" + context.to, i);
+    if (!request[3] && request[1] == "0x" + context.from) {
+      acceptable.push(request);
+    }
+  }
+  // Flatten the acceptable favor requests into suggestions
+  var suggestions = [];
+
+  for (var i = 0; i < acceptable.length; i++) {
+    suggestions.push(status.components.touchable(
+      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, "accept-" + acceptable[i][0]]])},
+      status.components.view(
+        suggestionsContainerStyle,
+        [status.components.view(
+          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+          [
+            status.components.text({style: {marginBottom: 4}}, "Accept favor request:"),
+            status.components.text({style: {fontStyle: "italic"}}, acceptable[i][2]),
+          ]
+        )]
+      )
+    ));
+  }
+  // Suggest asking for a favor, making a new promise to repay
+  suggestions.push(status.components.touchable(
+    {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, "ask"]])},
+    status.components.view(
+      suggestionsContainerStyle,
+      [status.components.view(
+        {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+        [status.components.text({style: {}}, "Ask for a favor, promise to return it yourself")]
+      )]
+    )
+  ));
+  // Find all the giftable favor promises
+  var promises = favornet.GetPromiseCount("0x" + address);
+
+  var giftable = [];
+  for (var i = 0; i < promises; i++) {
+    var promise = favornet.GetPromiseAt("0x" + address, i);
+    if (!promise[4]) {
+      giftable.push(promise);
+    }
+  }
+  // Flatten the giftable favor promises into suggestions
+  for (var i = 0; i < giftable.length; i++) {
+    suggestions.push(status.components.touchable(
+      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, "offer-" + giftable[i][0]]])},
+      status.components.view(
+        suggestionsContainerStyle,
+        [status.components.view(
+          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+          [
+            status.components.text({style: {marginBottom: 4}}, "Ask for a favor, reward with owned promise:"),
+            status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, giftable[i][2]),
+            status.components.text({style: {fontStyle: "italic"}}, giftable[i][3]),
+          ]
+        )]
+      )
+    ));
+  }
+  // Give back the whole thing inside an object.
+  return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
+}
