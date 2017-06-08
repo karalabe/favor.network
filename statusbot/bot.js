@@ -59,9 +59,14 @@ status.command({
       var request = favornet.GetRequestAt("0x" + context.from, i);
       var state = "They have *not accepted* the favor request yet so you can still */drop* it."
       if (request[3]) {
-        state = "They have *accepted* the favor request, you can only */honor* or */challenge* it."
+        state = "They have *accepted* the favor request, you can only */honour* or */challenge* it."
       }
-      status.sendMessage("Asking *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "* for\n\n~" + request[2] + "~\n\n" + state);
+      var reward = " a new promise to return the favor";
+      if (request[4] != 0) {
+        var promise = favornet.GetPromise(request[4]);
+        reward = "\n\n~" + promise[2] + "~\n\nfrom *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*."
+      }
+      status.sendMessage("Asking *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "* for\n\n~" + request[2] + "~\n\nin exchange for" + reward + ".\n\n" + state);
     }
   }
 });
@@ -133,6 +138,88 @@ function dropSuggestions() {
   return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
 }
 
+
+// The requests command list all of my currently open favor requests.
+status.command({
+  name: "honour",
+  title: "Honour",
+  description: "Honours an accepted favor request",
+  color: "#2c3e50",
+  params: [{
+    name: "id",
+    type: status.types.TEXT,
+    placeholder: "Request-reward ID to honour"
+    suggestions: honourSuggestions,
+  }]
+  preview: function (params, context) {
+    var text = status.components.text({}, "Please honour request #" + params.id);
+    return {markup: status.components.view({}, [text])};
+  },
+  handler: function (params, context) {
+    // Find the request of the given ID to allow honouring it
+    var requests = favornet.GetRequestCount("0x" + context.from);
+    for (var i = 0; i < requests; i++) {
+      var request = favornet.GetRequestAt("0x" + context.from, i);
+      if (request[0] == params.id) {
+        // Request found, find the reward index if existing one
+        var index = 0;
+        if (request[4] != 0) {
+          var promises = favornet.GetPromiseCount("0x" + context.from);
+          for (var j = 0; j < requests; j++) {
+            var promise = favornet.GetPromiseAt("0x" + context.from, j);
+            if (promise[0] == request[4]) {
+              index = j;
+              break;
+            }
+          }
+        }
+        favornet.HonourRequest.sendTransaction(i, params.id, index, {from: context.from}, function (error, hash) {
+          if (error) {
+            status.sendMessage("Favor request honour denied due to ~" + error + "~.");
+          } else {
+            status.sendMessage("Honouring favor request:\nhttps://ropsten.etherscan.io/tx/" + hash)
+          }
+        });
+        break;
+      }
+    }
+  }
+});
+
+// honourSuggestions pre-fills the suggestion box with accepted favor requests
+// that the user may honour with a promise.
+function honourSuggestions() {
+  // Find all the honourable favor requests
+  var requests = favornet.GetRequestCount("0x" + address);
+
+  var honourable = [];
+  for (var i = 0; i < requests; i++) {
+    var request = favornet.GetRequestAt("0x" + address, i);
+    if (request[3]) {
+      honourable.push(request);
+    }
+  }
+  // Render all the requests into a tapable list
+  var suggestions = honourable.map(function(entry) {
+    return status.components.touchable(
+      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, entry[0]]])},
+      status.components.view(
+        suggestionsContainerStyle,
+        [status.components.view(
+          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+          [
+            status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, entry[1]),
+            status.components.text({style: {fontStyle: "italic"}}, entry[2]),
+          ]
+        )]
+      )
+    );
+  });
+  // Give back the whole thing inside an object.
+  return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
+}
+
+
 // The favors command lists all of the favors currently promised to me.
 status.command({
   name: "favors",
@@ -151,10 +238,13 @@ status.command({
       return;
     }
     // Yup, favors everywhere
-    status.sendMessage("Yup");
     for (var i = 0; i < promises; i++) {
       var promise = favornet.GetPromiseAt("0x" + context.from, i);
-      status.sendMessage(promise);
+      var state = "You have *not offered* this favor to anyone, you may */destroy* it."
+      if (promise[4]) {
+        state = "You have *offered* this favor to someone in a request, so you cannot touch it."
+      }
+      status.sendMessage("From *" + promise[2].substring(0, 8) + "…" + promise[2].substring(36, 42) + "* for\n\n~" + promise[3] + "~\n\n" + state);
     }
   }
 });
@@ -240,6 +330,11 @@ function globalSuggestions(params, context) {
   var suggestions = [];
 
   for (var i = 0; i < acceptable.length; i++) {
+    var reward = " a new promise to return the favor";
+    if (request[4] != 0) {
+      var promise = favornet.GetPromise(request[4]);
+      reward = "\n\n~" + promise[2] + "~\n\nfrom *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*."
+    }
     suggestions.push(status.components.touchable(
       {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, "accept-" + acceptable[i][0]]])},
       status.components.view(
@@ -248,7 +343,8 @@ function globalSuggestions(params, context) {
           {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
           [
             status.components.text({style: {marginBottom: 4}}, "Accept favor request:"),
-            status.components.text({style: {fontStyle: "italic"}}, acceptable[i][2]),
+            status.components.text({style: {marginBottom: 4, fontStyle: "italic"}}, acceptable[i][2]),
+            status.components.text({style: {}}, "In exchange for: " + reward),
           ]
         )]
       )
