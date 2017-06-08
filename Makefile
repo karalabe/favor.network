@@ -1,4 +1,4 @@
-.PHONY: start-emulators deploy-emulators
+.PHONY: start-emulators deploy-status deploy-chatbot
 
 start-emulators:
 	@echo "Starting Android emulators..."
@@ -6,7 +6,13 @@ start-emulators:
 	$(ANDROID_HOME)/tools/emulator -avd Jarrad > /dev/null 2> /dev/null &
 	$(ANDROID_HOME)/tools/emulator -avd Nick   > /dev/null 2> /dev/null &
 
-deploy-emulators:
+deploy-status:
+	@echo "Starting Android emulators..."
+	$(ANDROID_HOME)/platform-tools/adb -s emulator-5554 install $(APK)
+	$(ANDROID_HOME)/platform-tools/adb -s emulator-5556 install $(APK)
+	$(ANDROID_HOME)/platform-tools/adb -s emulator-5558 install $(APK)
+
+deploy-chatbot:
 	(cd statusbot && http-server &)
 
 	@echo "Deploying chat-bot to Status emulators..."
