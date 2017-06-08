@@ -35,38 +35,68 @@ status.addListener("init",
 
     status.sendMessage("~\"Those who want respect, give respect\"~ ~Tony Soprano");
     status.sendMessage("Never forget a favor; and never break a promise. Reputation is above all. We'll make sure of it!");
+    status.sendMessage("I can list the favors you */asked* from others and those */owed* to you by others.");
 });
 
-// The requests command list all of my currently open favor requests.
+// The asking command lists all currently open favor requests asked by the user
+// from others. They may already be accepted, or just under consideration.
 status.command({
-  name: "requests",
-  title: "Requests",
-  description: "Lists my open favor requests",
+  name: "asked",
+  description: "Lists the favors asked from others",
   color: "#2c3e50",
   preview: function (params, context) {
-    var text = status.components.text({}, "Am I asking anyone for favors?");
+    var text = status.components.text({}, "Am I asking anyone favors?");
     return {markup: status.components.view({}, [text])};
   },
   handler: function (params, context) {
     // Get the number of requests and bail if none can be found
     var requests = favornet.GetRequestCount("0x" + context.from);
     if (requests == 0) {
-      status.sendMessage("You're not asking anyone for favors. Good for you!");
+      status.sendMessage("You are not asking anyone favors. Good for you!");
       return;
     }
     // Yup, favors everywhere
     for (var i = 0; i < requests; i++) {
       var request = favornet.GetRequestAt("0x" + context.from, i);
-      var state = "They have *not accepted* the favor request yet so you can still */drop* it."
+      var state = "They have *not accepted* the favor request yet so you may still */drop* it."
       if (request[3]) {
         state = "They have *accepted* the favor request, you can only */honour* or */challenge* it."
       }
-      var reward = " a new promise to return the favor";
+      var reward = " a *new promise* to return the favor";
       if (request[4] != 0) {
         var promise = favornet.GetPromise(request[4]);
         reward = "\n\n~" + promise[2] + "~\n\nfrom *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*."
       }
-      status.sendMessage("Asking *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "* for\n\n~" + request[2] + "~\n\nin exchange for" + reward + ".\n\n" + state);
+      status.sendMessage("Asked *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "* for\n\n~" + request[2] + "~\n\nin exchange for" + reward + ".\n\n" + state);
+    }
+  }
+});
+
+// The owed command lists all favors currently promised by others to the user.
+// The favor promises may already be offered as a reward to some user request.
+status.command({
+  name: "owed",
+  description: "Lists the favors owed by others",
+  color: "#2c3e50",
+  preview: function (params, context) {
+    var text = status.components.text({}, "Is anyone owing me favors?");
+    return {markup: status.components.view({}, [text])};
+  },
+  handler: function (params, context) {
+    // Get the number of requests and bail if none can be found
+    var promises = favornet.GetPromiseCount("0x" + context.from);
+    if (promises == 0) {
+      status.sendMessage("Nope! Perhaps you should help people a bit and earn some?");
+      return;
+    }
+    // Yup, favors everywhere
+    for (var i = 0; i < promises; i++) {
+      var promise = favornet.GetPromiseAt("0x" + context.from, i);
+      var state = "You have *not offered* this favor to anyone, so you may */drop* it."
+      if (promise[4]) {
+        state = "You have *offered* this favor to someone in a request, so you cannot touch it."
+      }
+      status.sendMessage("Owed by *" + promise[2].substring(0, 8) + "…" + promise[2].substring(36, 42) + "*: \n\n~" + promise[3] + "~\n\n" + state);
     }
   }
 });
@@ -218,36 +248,6 @@ function honourSuggestions() {
   // Give back the whole thing inside an object.
   return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
 }
-
-
-// The favors command lists all of the favors currently promised to me.
-status.command({
-  name: "favors",
-  title: "Favors",
-  description: "List the favors promised to me",
-  color: "#2c3e50",
-  preview: function (params, context) {
-    var text = status.components.text({}, "Is anyone owing me favors?");
-    return {markup: status.components.view({}, [text])};
-  },
-  handler: function (params, context) {
-    // Get the number of requests and bail if none can be found
-    var promises = favornet.GetPromiseCount("0x" + context.from);
-    if (promises == 0) {
-      status.sendMessage("Not that I know of!");
-      return;
-    }
-    // Yup, favors everywhere
-    for (var i = 0; i < promises; i++) {
-      var promise = favornet.GetPromiseAt("0x" + context.from, i);
-      var state = "You have *not offered* this favor to anyone, you may */destroy* it."
-      if (promise[4]) {
-        state = "You have *offered* this favor to someone in a request, so you cannot touch it."
-      }
-      status.sendMessage("From *" + promise[2].substring(0, 8) + "…" + promise[2].substring(36, 42) + "* for\n\n~" + promise[3] + "~\n\n" + state);
-    }
-  }
-});
 
 // The global command contains the all the different transactional interactions.
 status.command({
