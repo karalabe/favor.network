@@ -78,7 +78,7 @@ status.command({
       var request = favornet.getRequestAt("0x" + context.from, i);
       var state = "They have *not accepted* the favor request yet so you may still */drop* it."
       if (request[3]) {
-        state = "They have *accepted* the favor request, you can only */honour* or */challenge* it."
+        state = "They have *accepted* the favor request, please */honour* it."
       }
       status.sendMessage("Asked " + prettyRequest(request, false) + "\n\n" + state);
     }
@@ -196,7 +196,7 @@ function dropSuggestions(params, context) {
       status.components.view(
         suggestionsContainerStyle,
         [status.components.view(
-          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4},
           [
             status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, entry[1]),
             status.components.text({style: {fontStyle: "italic"}}, entry[2]),
@@ -277,7 +277,7 @@ function honourSuggestions(params, context) {
       status.components.view(
         suggestionsContainerStyle,
         [status.components.view(
-          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4},
           [
             status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, entry[1]),
             status.components.text({style: {fontStyle: "italic"}}, entry[2]),
@@ -310,13 +310,14 @@ status.command({
   ]
   sequentialParams: true,
   preview: function (params, context) {
-    var text;
+    // If we're asking for a favor, display it and return
     if (params.action == "ask" || params.action.indexOf("offer-") === 0) {
-      text = status.components.text({}, "Requesting favor: " + params.favor);
-    } else {
-      text = status.components.text({}, "Accepting favor request: " + params.favor);
+      return {markup: status.components.view({}, [status.components.text({}, "Requesting favor: " + params.favor)])};
     }
-    return {markup: status.components.view({}, [text])};
+    // Apparently we're accepting a favor request, find it's index and bind
+    var id = params.action.substring(7);
+
+    return {markup: status.components.view({}, [status.components.text({}, "Accepting favor request: " + favornet.getRequest(id)[1])])};
   },
   handler: function (params, context) {
     // If we're asking for a favor, inject and return
@@ -376,22 +377,23 @@ function globalSuggestions(params, context) {
   var suggestions = [];
 
   for (var i = 0; i < acceptable.length; i++) {
-    var reward = " a new promise to return the favor";
-    if (request[4] != 0) {
-      var promise = favornet.getPromise(request[4]);
-      reward = "\n\n~" + promise[2] + "~\n\nfrom *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*."
+    var entry = [
+      status.components.text({style: {marginBottom: 4, color: "#000", textDecorationLine: "underline"}}, "Accept favor request"),
+      status.components.text({style: {marginBottom: 4, color: "#000", fontStyle: "italic"}}, acceptable[i][2]),
+    ];
+    if (acceptable[i][4] == 0) {
+      entry.push(status.components.text({style: {color: "#000"}}, "In exchange for a new promise to return the favor."));
+    } else {
+      var promise = favornet.getPromise(acceptable[i][4]);
+      entry.push(status.components.text({style: {marginBottom: 4, color: "#000"}}, "In exchange for a promise from " + promise[1].substring(0, 8) + "…" + promise[1].substring(36, 42)));
+      entry.push(status.components.text({style: {color: "#000", fontStyle: "italic"}}, promise[2]));
     }
     suggestions.push(status.components.touchable(
       {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, "accept-" + acceptable[i][0]]])},
       status.components.view(
         suggestionsContainerStyle,
         [status.components.view(
-          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
-          [
-            status.components.text({style: {marginBottom: 4}}, "Accept favor request:"),
-            status.components.text({style: {marginBottom: 4, fontStyle: "italic"}}, acceptable[i][2]),
-            status.components.text({style: {}}, "In exchange for: " + reward),
-          ]
+          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4}, entry
         )]
       )
     ));
@@ -402,8 +404,8 @@ function globalSuggestions(params, context) {
     status.components.view(
       suggestionsContainerStyle,
       [status.components.view(
-        {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
-        [status.components.text({style: {}}, "Ask for a favor, promise to return it yourself")]
+        {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4},
+        [status.components.text({style: {color: "#000"}}, "Request favor and promise to return it yourself")]
       )]
     )
   ));
@@ -424,11 +426,10 @@ function globalSuggestions(params, context) {
       status.components.view(
         suggestionsContainerStyle,
         [status.components.view(
-          {borderBottomWidth: 1, borderBottomColor: "#0000001f"},
+          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4},
           [
-            status.components.text({style: {marginBottom: 4}}, "Ask for a favor, reward with owned promise:"),
-            status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, giftable[i][2]),
-            status.components.text({style: {fontStyle: "italic"}}, giftable[i][3]),
+            status.components.text({style: {marginBottom: 4, color: "#000", textDecorationLine: "underline"}}, "Request favor and reward promise from " + giftable[i][2].substring(0, 8) + "…" + giftable[i][2].substring(36, 42)),
+            status.components.text({style: {color: "#000", fontStyle: "italic"}}, giftable[i][3]),
           ]
         )]
       )
