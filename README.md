@@ -30,6 +30,24 @@ A much nicer solution would be to allow the bot to monitor the blockchain for tr
 
 Another possibility is to permit chatbots to have their own life cycles, which would allow them to periodically query the chain for needed data and ping the user whenever it deems useful. The benefit of this second approach is that it covers both events initiated locally as well as remote contract updates.
 
+#### Allow chatbots to post into human-to-human chats
+
+Currently Status allows a chatbot to register a `global` command that is made available on human-to-human chat windows, permitting both participants to interact with the bot itself while chatting with each other. The bot however is not allowed to send a message back into this conversation.
+
+To understand why such a feature would be really powerful, consider the following interaction:
+
+ * Alice pings the favor bot to open a new request to Bob
+ * A preview is shown, but the transaction is still pending
+   * Bob cannot react until the transction finishes
+ * *Transaction executes sucessfully*
+   * *Nobody knows about it, so it's trial and error*
+ * **If the favor bot could notify both parties**
+   * **Bob could properly react to the request**
+
+An alternative could be that if a command from a human-to-human chat results in a transaction, Status could automatically inject a message sent via `Console` that could show a progression icon, changing to green/red when the transaction finishes/fails. This would help users notice that they can continue some interaction suspended by Ethereum's transaction processing.
+
+Such a feature would also be beneficial for `/send` and `/receive` where users could be notified not just that the other party executed the command, but also of it's current execution status.
+
 #### Message formatting breaks URL detection
 
 If a chatbot sends a message to the user via `status.sendMessage` which contains a URL, that is automatically detected and converted into a `@browser URL` tappable command. However this functionality breaks if the message being sent contains any format modifiers (`*` or `~`).
