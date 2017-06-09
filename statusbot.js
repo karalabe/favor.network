@@ -6,11 +6,11 @@
 
 // favornetAddress is the Favor Network's contract address deployed on the Ropsten
 // test network.
-var favornetAddress = "0xaE287510a5b2E1ecd9538e75DC0Beff1B0e671c8";
+var favornetAddress = "0xd1ee90c67ab3cedd911773b193617b6ecac6bf7a";
 
 // favornetABI is the Favor Network's contract ABI to allow user interaction and
 // data queries.
-var favornetABI = [{"constant":false,"inputs":[{"name":"index","type":"uint256"},{"name":"id","type":"uint256"}],"name":"DropPromise","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"},{"name":"index","type":"uint256"}],"name":"GetRequestAt","outputs":[{"name":"id","type":"uint256"},{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"bound","type":"bool"},{"name":"reward","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"index","type":"uint256"},{"name":"id","type":"uint256"}],"name":"AcceptRequest","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"reqIdx","type":"uint256"},{"name":"reqId","type":"uint256"},{"name":"promIdx","type":"uint256"}],"name":"HonourRequest","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"reward","type":"uint256"}],"name":"MakeRequest","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"id","type":"uint256"}],"name":"GetRequest","outputs":[{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"bound","type":"bool"},{"name":"reward","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"},{"name":"index","type":"uint256"}],"name":"GetPromiseAt","outputs":[{"name":"id","type":"uint256"},{"name":"owner","type":"address"},{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"offered","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"}],"name":"GetPromiseCount","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"id","type":"uint256"}],"name":"GetPromise","outputs":[{"name":"owner","type":"address"},{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"offered","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"}],"name":"GetRequestCount","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"index","type":"uint256"},{"name":"id","type":"uint256"}],"name":"DropRequest","outputs":[],"payable":false,"type":"function"},{"inputs":[],"payable":false,"type":"constructor"}];
+var favornetABI = [{"constant":false,"inputs":[{"name":"index","type":"uint256"},{"name":"id","type":"uint256"}],"name":"dropRequest","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"}],"name":"getRequestCount","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"reqIdx","type":"uint256"},{"name":"reqId","type":"uint256"},{"name":"promIdx","type":"uint256"}],"name":"honourRequest","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"index","type":"uint256"},{"name":"id","type":"uint256"}],"name":"dropPromise","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"id","type":"uint256"}],"name":"getRequest","outputs":[{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"bound","type":"bool"},{"name":"reward","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"},{"name":"index","type":"uint256"}],"name":"getPromiseAt","outputs":[{"name":"id","type":"uint256"},{"name":"owner","type":"address"},{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"offered","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"},{"name":"index","type":"uint256"}],"name":"getRequestAt","outputs":[{"name":"id","type":"uint256"},{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"bound","type":"bool"},{"name":"reward","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"reward","type":"uint256"}],"name":"makeRequest","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"user","type":"address"}],"name":"getPromiseCount","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"id","type":"uint256"}],"name":"getPromise","outputs":[{"name":"owner","type":"address"},{"name":"from","type":"address"},{"name":"favor","type":"string"},{"name":"offered","type":"bool"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"index","type":"uint256"},{"name":"id","type":"uint256"}],"name":"acceptRequest","outputs":[],"payable":false,"type":"function"},{"inputs":[],"payable":false,"type":"constructor"}];
 
 // favornet is a live contract interface into the Favor Network.
 var favornet = web3.eth.contract(favornetABI).at(favornetAddress);
@@ -36,7 +36,7 @@ var prettyRequest = function(request, accept) {
   var reward = " a *new promise* to return the favor";
   if (request[4] != 0) {
     // An existing pledge was offered as a reward, gather its details
-    var promise = favornet.GetPromise(request[4]);
+    var promise = favornet.getPromise(request[4]);
     reward = "\n\n~" + promise[2] + "~\n\nfrom *" + promise[1].substring(0, 8) + "…" + promise[1].substring(36, 42) + "*";
   }
   // Format the request along with the above reward
@@ -68,14 +68,14 @@ status.command({
   },
   handler: function (params, context) {
     // Get the number of requests and bail if none can be found
-    var requests = favornet.GetRequestCount("0x" + context.from);
+    var requests = favornet.getRequestCount("0x" + context.from);
     if (requests == 0) {
       status.sendMessage("You are not asking anyone favors. Good for you!");
       return;
     }
     // Yup, favors everywhere
     for (var i = 0; i < requests; i++) {
-      var request = favornet.GetRequestAt("0x" + context.from, i);
+      var request = favornet.getRequestAt("0x" + context.from, i);
       var state = "They have *not accepted* the favor request yet so you may still */drop* it."
       if (request[3]) {
         state = "They have *accepted* the favor request, you can only */honour* or */challenge* it."
@@ -98,14 +98,14 @@ status.command({
   },
   handler: function (params, context) {
     // Get the number of requests and bail if none can be found
-    var promises = favornet.GetPromiseCount("0x" + context.from);
+    var promises = favornet.getPromiseCount("0x" + context.from);
     if (promises == 0) {
       status.sendMessage("Nope! Perhaps you should help people a bit and earn some?");
       return;
     }
     // Yup, favors everywhere
     for (var i = 0; i < promises; i++) {
-      var promise = favornet.GetPromiseAt("0x" + context.from, i);
+      var promise = favornet.getPromiseAt("0x" + context.from, i);
       var state = "You have *not offered* this favor to anyone, so you may */drop* it."
       if (promise[4]) {
         state = "You have *offered* this favor to someone in a request, so you cannot touch it."
@@ -133,11 +133,11 @@ status.command({
   },
   handler: function (params, context) {
     // Find the request of the given ID and issue a transaction to drop it
-    var requests = favornet.GetRequestCount("0x" + context.from);
+    var requests = favornet.getRequestCount("0x" + context.from);
     for (var i = 0; i < requests; i++) {
-      var request = favornet.GetRequestAt("0x" + context.from, i);
+      var request = favornet.getRequestAt("0x" + context.from, i);
       if (request[0] == params.id) {
-        favornet.DropRequest.sendTransaction(i, params.id, {from: context.from}, function (error, hash) {
+        favornet.dropRequest.sendTransaction(i, params.id, {from: context.from}, function (error, hash) {
           if (error) {
             status.sendMessage("Favor request drop denied due to ~" + error + "~.");
           } else {
@@ -149,11 +149,11 @@ status.command({
       }
     }
     // Find the promise of the given ID and issue a transaction to drop it
-    var promises = favornet.GetPromiseCount("0x" + context.from);
+    var promises = favornet.getPromiseCount("0x" + context.from);
     for (var i = 0; i < promises; i++) {
-      var promise = favornet.GetPromiseAt("0x" + context.from, i);
+      var promise = favornet.getPromiseAt("0x" + context.from, i);
       if (promise[0] == params.id) {
-        favornet.DropPromise.sendTransaction(i, params.id, {from: context.from}, function (error, hash) {
+        favornet.dropPromise.sendTransaction(i, params.id, {from: context.from}, function (error, hash) {
           if (error) {
             status.sendMessage("Favor promise drop denied due to ~" + error + "~.");
           } else {
@@ -175,16 +175,16 @@ function dropSuggestions(params, context) {
   // Find all the dropable favor requests or promises
   var dropable = [];
 
-  var requests = favornet.GetRequestCount("0x" + context.from);
+  var requests = favornet.getRequestCount("0x" + context.from);
   for (var i = 0; i < requests; i++) {
-    var request = favornet.GetRequestAt("0x" + context.from, i);
+    var request = favornet.getRequestAt("0x" + context.from, i);
     if (!request[3]) {
       dropable.push(request);
     }
   }
-  var promises = favornet.GetPromiseCount("0x" + context.from);
+  var promises = favornet.getPromiseCount("0x" + context.from);
   for (var i = 0; i < promises; i++) {
-    var promise = favornet.GetPromiseAt("0x" + context.from, i);
+    var promise = favornet.getPromiseAt("0x" + context.from, i);
     if (!promise[4]) {
       dropable.push(promise);
     }
@@ -228,23 +228,23 @@ status.command({
   },
   handler: function (params, context) {
     // Find the request of the given ID to allow honouring it
-    var requests = favornet.GetRequestCount("0x" + context.from);
+    var requests = favornet.getRequestCount("0x" + context.from);
     for (var i = 0; i < requests; i++) {
-      var request = favornet.GetRequestAt("0x" + context.from, i);
+      var request = favornet.getRequestAt("0x" + context.from, i);
       if (request[0] == params.id) {
         // Request found, find the reward index if existing one
         var index = 0;
         if (request[4] != 0) {
-          var promises = favornet.GetPromiseCount("0x" + context.from);
+          var promises = favornet.getPromiseCount("0x" + context.from);
           for (var j = 0; j < requests; j++) {
-            var promise = favornet.GetPromiseAt("0x" + context.from, j);
+            var promise = favornet.getPromiseAt("0x" + context.from, j);
             if (promise[0] == request[4]) {
               index = j;
               break;
             }
           }
         }
-        favornet.HonourRequest.sendTransaction(i, params.id, index, {from: context.from}, function (error, hash) {
+        favornet.honourRequest.sendTransaction(i, params.id, index, {from: context.from}, function (error, hash) {
           if (error) {
             status.sendMessage("Favor request honour denied due to ~" + error + "~.");
           } else {
@@ -261,11 +261,11 @@ status.command({
 // that the user may honour with a promise.
 function honourSuggestions(params, context) {
   // Find all the honourable favor requests
-  var requests = favornet.GetRequestCount("0x" + context.from);
+  var requests = favornet.getRequestCount("0x" + context.from);
 
   var honourable = [];
   for (var i = 0; i < requests; i++) {
-    var request = favornet.GetRequestAt("0x" + context.from, i);
+    var request = favornet.getRequestAt("0x" + context.from, i);
     if (request[3]) {
       honourable.push(request);
     }
@@ -325,7 +325,7 @@ status.command({
       if (params.action.indexOf("offer-") === 0) {
         reward = params.action.substring(6);
       }
-      favornet.MakeRequest.sendTransaction("0x" + context.to, params.favor, reward, {from: context.from}, function (error, hash) {
+      favornet.makeRequest.sendTransaction("0x" + context.to, params.favor, reward, {from: context.from}, function (error, hash) {
         if (error) {
           status.sendMessage("Favor request denied due to ~" + error + "~.");
         } else {
@@ -339,11 +339,11 @@ status.command({
     // Apparently we're accepting a favor request, find it's index and bind
     var id = params.action.substring(7);
 
-    var requests = favornet.GetRequestCount("0x" + context.to);
+    var requests = favornet.getRequestCount("0x" + context.to);
     for (var i = 0; i < requests; i++) {
-      var request = favornet.GetRequestAt("0x" + context.to, i);
+      var request = favornet.getRequestAt("0x" + context.to, i);
       if (request[0] == id) {
-        favornet.AcceptRequest.sendTransaction("0x" + context.to, i, id, {from: context.from}, function (error, hash) {
+        favornet.acceptRequest.sendTransaction("0x" + context.to, i, id, {from: context.from}, function (error, hash) {
           if (error) {
             status.sendMessage("Favor request acceptance denied due to ~" + error + "~.");
           } else {
@@ -363,11 +363,11 @@ status.command({
 // a favor request.
 function globalSuggestions(params, context) {
   // Find all the acceptable favor requests
-  var requests = favornet.GetRequestCount("0x" + context.to);
+  var requests = favornet.getRequestCount("0x" + context.to);
 
   var acceptable = [];
   for (var i = 0; i < requests; i++) {
-    var request = favornet.GetRequestAt("0x" + context.to, i);
+    var request = favornet.getRequestAt("0x" + context.to, i);
     if (!request[3] && request[1] == "0x" + context.from) {
       acceptable.push(request);
     }
@@ -378,7 +378,7 @@ function globalSuggestions(params, context) {
   for (var i = 0; i < acceptable.length; i++) {
     var reward = " a new promise to return the favor";
     if (request[4] != 0) {
-      var promise = favornet.GetPromise(request[4]);
+      var promise = favornet.getPromise(request[4]);
       reward = "\n\n~" + promise[2] + "~\n\nfrom *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*."
     }
     suggestions.push(status.components.touchable(
@@ -408,11 +408,11 @@ function globalSuggestions(params, context) {
     )
   ));
   // Find all the giftable favor promises
-  var promises = favornet.GetPromiseCount("0x" + context.from);
+  var promises = favornet.getPromiseCount("0x" + context.from);
 
   var giftable = [];
   for (var i = 0; i < promises; i++) {
-    var promise = favornet.GetPromiseAt("0x" + context.from, i);
+    var promise = favornet.getPromiseAt("0x" + context.from, i);
     if (!promise[4]) {
       giftable.push(promise);
     }

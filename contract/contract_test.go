@@ -20,9 +20,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// setupFavornetTest creates a blockchain simulator and deploys a favor-network
+// setupFavorNetworkTest creates a blockchain simulator and deploys a favor-network
 // contract for testing.
-func setupFavornetTest(t *testing.T, prefund ...*ecdsa.PrivateKey) (*ecdsa.PrivateKey, *Favornet, *backends.SimulatedBackend) {
+func setupFavorNetworkTest(t *testing.T, prefund ...*ecdsa.PrivateKey) (*ecdsa.PrivateKey, *FavorNetwork, *backends.SimulatedBackend) {
 	// Generate a new random account and a funded simulator
 	key, _ := crypto.GenerateKey()
 	auth := bind.NewKeyedTransactor(key)
@@ -34,7 +34,7 @@ func setupFavornetTest(t *testing.T, prefund ...*ecdsa.PrivateKey) (*ecdsa.Priva
 	sim := backends.NewSimulatedBackend(alloc)
 
 	// Deploy a version favornet contract, commit and return
-	_, _, favornet, err := DeployFavornet(auth, sim)
+	_, _, favornet, err := DeployFavorNetwork(auth, sim)
 	if err != nil {
 		t.Fatalf("Failed to deploy favor-network contract: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestRequestCreation(t *testing.T) {
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
 	}
-	_, favornet, sim := setupFavornetTest(t, keys...)
+	_, favornet, sim := setupFavorNetworkTest(t, keys...)
 
 	// Gradually issue new requests with the keys, validating the existing ones
 	for i := 0; i < 5; i++ {
@@ -87,7 +87,7 @@ func TestRequestCreation(t *testing.T) {
 func TestRequestDeletion(t *testing.T) {
 	// Prefund an account to request with and create the favornet
 	key, _ := crypto.GenerateKey()
-	_, favornet, sim := setupFavornetTest(t, key)
+	_, favornet, sim := setupFavorNetworkTest(t, key)
 
 	// Issue a batch of requests and sanity check the count
 	for i := 0; i < 25; i++ {
@@ -154,7 +154,7 @@ func TestRequestAcceptance(t *testing.T) {
 	requester, _ := crypto.GenerateKey()
 	accepter, _ := crypto.GenerateKey()
 
-	_, favornet, sim := setupFavornetTest(t, requester, accepter)
+	_, favornet, sim := setupFavorNetworkTest(t, requester, accepter)
 
 	// Create a request to test acceptance against and ensure it's unbound
 	if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(requester), crypto.PubkeyToAddress(accepter.PublicKey), "Hello, Favor!", new(big.Int)); err != nil {
@@ -210,7 +210,7 @@ func TestRequestHonouring(t *testing.T) {
 	alice, _ := crypto.GenerateKey()
 	bob, _ := crypto.GenerateKey()
 
-	_, favornet, sim := setupFavornetTest(t, alice, bob)
+	_, favornet, sim := setupFavorNetworkTest(t, alice, bob)
 
 	// Create a request with Alice and bind it with Bob
 	if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(alice), crypto.PubkeyToAddress(bob.PublicKey), "Hello, Favor!", new(big.Int)); err != nil {
