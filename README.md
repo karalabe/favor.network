@@ -22,7 +22,7 @@ By integrating the [Favor Network](https://favor.network/) seamlessly into Statu
 
 ## Status bugs and suggestions
 
-#### Message formatting break URL detection
+#### Message formatting breaks URL detection
 
 If a chatbot sends a message to the user via `status.sendMessage` which contains a URL, that is automatically detected and converted into a `@browser URL` tappable command. However this functionality breaks if the message being sent contains any format modifiers (`*` or `~`).
 
@@ -39,3 +39,7 @@ Currently a chatbot can send a message via `status.sendMessage`, where formattin
 This is unfortunate because if I need to display the same information in both a sent message as well as a command preview, I need to make two formatters. Furthermore it breaks the style because I can't imagine an easy way to make them look the same.
 
 My suggestion would be to provide a pre-built component from the status SDK that does the same formatting a used in `status.sendMessage`. Of course making something explicitly catered for each command is arguably better, having a nice default out of the box might help adoption by allowing faster prototyping.
+
+#### Allow deleting synchronized chain data
+
+When setting up multiple emualtors at once, usually some of them started syncing from zero. Not sure why this happened (possibly a bad peer?), but this results in a very slow startup and a lot of disk space. I know that ultimately Geth needs to be smarter here (would appreciate a bug report), but perhaps having some menu to "delete chain data" would help both fix this error as well as possibly clear out old data when a new version of Status is released with a new CHT.
