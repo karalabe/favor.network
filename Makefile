@@ -19,16 +19,16 @@ deploy-chatbot:
 	$(ANDROID_HOME)/platform-tools/adb -s emulator-5554 forward tcp:5561 tcp:5561
 	$(ANDROID_HOME)/platform-tools/adb -s emulator-5554 reverse tcp:8080 tcp:8080
 	status-dev-cli remove favor --ip localhost
-	status-dev-cli add '{"whisper-identity": "favor",  "name": "Favor Network" ,"bot-url": "http://127.0.0.1:8080/statusbot.js", "photo-path":"https://www.dropbox.com/s/vzam3sb3nzbs505/robot_scott.png?raw=1"}' --ip localhost
+	status-dev-cli add '{"whisper-identity": "favor",  "name": "Favor Network" ,"bot-url": "http://127.0.0.1:8080/statusbot.js", "photo-path":"http://favor.network/statusbot.png"}' --ip localhost
 
 	$(ANDROID_HOME)/platform-tools/adb -s emulator-5556 forward tcp:5561 tcp:5561
 	$(ANDROID_HOME)/platform-tools/adb -s emulator-5556 reverse tcp:8080 tcp:8080
 	status-dev-cli remove favor --ip localhost
-	status-dev-cli add '{"whisper-identity": "favor",  "name": "Favor Network" ,"bot-url": "http://127.0.0.1:8080/statusbot.js", "photo-path":"https://www.dropbox.com/s/vzam3sb3nzbs505/robot_scott.png?raw=1"}' --ip localhost
+	status-dev-cli add '{"whisper-identity": "favor",  "name": "Favor Network" ,"bot-url": "http://127.0.0.1:8080/statusbot.js", "photo-path":"http://favor.network/statusbot.png"}' --ip localhost
 
 	$(ANDROID_HOME)/platform-tools/adb -s emulator-5558 forward tcp:5561 tcp:5561
 	$(ANDROID_HOME)/platform-tools/adb -s emulator-5558 reverse tcp:8080 tcp:8080
 	status-dev-cli remove favor --ip localhost
-	status-dev-cli add '{"whisper-identity": "favor",  "name": "Favor Network" ,"bot-url": "http://127.0.0.1:8080/statusbot.js", "photo-path":"https://www.dropbox.com/s/vzam3sb3nzbs505/robot_scott.png?raw=1"}' --ip localhost
+	status-dev-cli add '{"whisper-identity": "favor",  "name": "Favor Network" ,"bot-url": "http://127.0.0.1:8080/statusbot.js", "photo-path":"http://favor.network/statusbot.png"}' --ip localhost
 
 	killall node

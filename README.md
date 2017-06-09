@@ -18,9 +18,37 @@ By integrating the [Favor Network](https://favor.network/) seamlessly into Statu
 
 [![Favor Network](https://img.youtube.com/vi/lO4AsBTiXB8/0.jpg)](https://www.youtube.com/watch?v=lO4AsBTiXB8)
 
+## Try it out yourself
+
+To try out the favor network yourself you'll need a few things. First up, the official Status release contains a bug which prevents command suggestions from accessing the chat context between two people (hint, we need that). This was [fixed by Roman](https://github.com/rasom/status-react/commit/0bee6439d6a6f8e67bff7c3a28650361d017b741) and an updated unofficial [Android `.apk`](https://www.dropbox.com/s/rghvb0n94zn28a8/status-0bee6439d6a6f8e67bff7c3a28650361d017b741.apk?dl=0) provided. **This bugfix is unavailable on iOS currently**.
+
+With the above mentioned Android package installed on your device or emulator (you'll need at least two physical or virtual devices to test), you can use the `status-dev-cli` command to install the favor network chatbot onto your devices. The below script forwards the debug port of status to your local network adapter and hard-reinstalls the favor bot.
+
+```bash
+# List all devices attached to your machine
+$ $ANDROID_HOME/platform-tools/adb devices
+
+# To each of the above, deploy the chatbot one by one
+$ $ANDROID_HOME/platform-tools/adb -s device-id-from-above forward tcp:5561 tcp:5561
+$ status-dev-cli remove favor --ip localhost
+$ status-dev-cli add '{"whisper-identity":"favor", "name":"Favor Network", "bot-url":"http://favor.network/statusbot.js", "photo-path":"http://favor.network/statusbot.png"}' --ip localhost
+```
+
+If everything went well, the favor network chatbot should be open on your Status messenger app, greeting you with a mobster quote and giving a few hints on how to start. Feel free to open a human-to-human chat and start running `@favor`s between your accounts. Whenever you're wondering what's happening, switch back to the bot and you'll find all the events there.
+
 ## Missing features
 
+The favor network is currently in a proof-of-concept state, glued together for the [Status hackathon](https://hackathon.status.im/). The core ideas behind it are there for experimentation, but the code is not so nice and a lot of features are still missing (some due to time limitations, others due to pending features and bugfixes on Status itself):
+
+ * Favor requests are currently uploaded in full to the Ethereum blockchain. This of course entails paying for storage costs proportional to the length of the text. This can be replaced with a Swarm or IPFS based storage when such a feature lands in Status, reducing the storage requirements to 32 bytes (content hash).
+ * Favors are currently pushed in plaintext form into the system. This isn't the best idea as it can leak unintended personal details out for all to see. This can however be solved by encrypting the content of the favor client side, and using Whisper built into Status to forward the decryption key to the intended recipient.
+ * There is no reputation sustem in place currently. To support this we need an extra functionality of challenging favor requests instead of just being able to honour them. A challenge would entail both parties having a public discussion about the reason of failure. Others would then be able to evaluate on their own whether to trust someone or not.
+
+The above 3 main features are a must have before the favor network could be considered ready for prime time, but I'm hoping the current reduced feature set is enough to demonstrate the viability of the idea, with the remainder mostly requiring work, work and some more work to implement.
+
 ## Status bugs and suggestions
+
+The below list contains a randomly ordered braindump of the issues and shortcomings I've found while developing the favor network. It is a feedback towards the Status team to help make their platform more robust.
 
 #### Allow chatbots to have event loops or chain callbacks
 
