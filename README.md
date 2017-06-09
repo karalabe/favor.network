@@ -20,6 +20,22 @@ By integrating the [Favor Network](https://favor.network/) seamlessly into Statu
 
 ## Missing features
 
-## Status bug reports
+## Status bugs and suggestions
 
-*
+#### Message formatting break URL detection
+
+If a chatbot sends a message to the user via `status.sendMessage` which contains a URL, that is automatically detected and converted into a `@browser URL` tappable command. However this functionality breaks if the message being sent contains any format modifiers (`*` or `~`).
+
+Beside fixing the issue so that format modifiers don't break URL detection, I'd venture into suggesting support for a few more modifiers:
+
+ * Explicitly mark a URL as such, perhaps supporting an alternate display string. You could make this feature only available for chat bots but not for users so users can't spoof links but chatbots can display short and sweet versions.
+ * Explicitly mark an Ethereum address as such, shortening the display to `0x123456...000000` for example, and creating a tapable `@browse https://etherscan.io/address/0x...` link out of it. The hash could be extended with a contact's name if it's an address known to us.
+ * Explicitly mark an Ethereum transaction and block hash as such, shortening and linking them to a block explorer. Perhaps a visual que could also be used to differentiate between the two (note, differentiation cannot be done automatically, it needs a hint from the creator of the message).
+
+#### Allow formatting modifiers in command previews
+
+Currently a chatbot can send a message via `status.sendMessage`, where formatting is done via small modifiers (e.g. `*` for bold and `~` for italic). On the other hand a chatbot's command is displayed via `component.preview`, where formatting is done via full blown reactive components.
+
+This is unfortunate because if I need to display the same information in both a sent message as well as a command preview, I need to make two formatters. Furthermore it breaks the style because I can't imagine an easy way to make them look the same.
+
+My suggestion would be to provide a pre-built component from the status SDK that does the same formatting a used in `status.sendMessage`. Of course making something explicitly catered for each command is arguably better, having a nice default out of the box might help adoption by allowing faster prototyping.
