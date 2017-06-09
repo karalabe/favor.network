@@ -22,6 +22,14 @@ By integrating the [Favor Network](https://favor.network/) seamlessly into Statu
 
 ## Status bugs and suggestions
 
+#### Allow chatbots to have event loops or chain callbacks
+
+The chatbots can currently be directed to issue transactions on the users' behalf. The best solution I could come up with to notify the user about this is to have the bot send a message with the transaction details (app specific, not technical), and send a second message with a URL linking the transaction to etherscan. This live URL allows the user to track the progress of the transaction.
+
+A much nicer solution would be to allow the bot to monitor the blockchain for transaction inclusion events and do something when it happens. One possibility is to extend Status with a new chatbot event, which gets triggered if a transaction is included that was sent by the bot. This would allow the bot to react when something it initiated has completed.
+
+Another possibility is to permit chatbots to have their own life cycles, which would allow them to periodically query the chain for needed data and ping the user whenever it deems useful. The benefit of this second approach is that it covers both events initiated locally as well as remote contract updates.
+
 #### Message formatting breaks URL detection
 
 If a chatbot sends a message to the user via `status.sendMessage` which contains a URL, that is automatically detected and converted into a `@browser URL` tappable command. However this functionality breaks if the message being sent contains any format modifiers (`*` or `~`).
