@@ -1,3 +1,9 @@
+// Copyright (C) 2017 Péter Szilágyi - All Rights Reserved.
+//
+// This file is part of the `favor.network` Status IM hackathon entry. Source code
+// is provided solely for judging purposes, without any explicit or implied waiver
+// of rights or allowance of reuse in whole or in part.
+
 // favornetAddress is the Favor Network's contract address deployed on the Ropsten
 // test network.
 var favornetAddress = "0xaE287510a5b2E1ecd9538e75DC0Beff1B0e671c8";
