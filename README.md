@@ -79,3 +79,13 @@ My suggestion would be to allow chatbots to send multiple commands like in the e
 #### Allow deleting synchronized chain data
 
 When setting up multiple emualtors at once, usually some of them started syncing from zero. Not sure why this happened (possibly a bad peer?), but this results in a very slow startup and a lot of disk space. I know that ultimately Geth needs to be smarter here (would appreciate a bug report), but perhaps having some menu to "delete chain data" would help both fix this error as well as possibly clear out old data when a new version of Status is released with a new CHT.
+
+#### Various failures around global commands
+
+If a chatbot provides a global command, that can be called via `@botname` in human-to-human chat windows. When these are displayed as previews however, the command label shown is `/global` not `@botname`. This makes it impossible for the remote side to know which bot was invoked.
+
+The formatting also almost always fails on the remote side. It may have something to do with `TEXT` parameters containing spaces. Very rarely I managed to have it properly formatted, but generally it just displays a JSON dump on the remote side.
+
+Lastly global commands cannot be currently used as `response` requests. It would be nice to support this use case becase then in the below example my speach bubble that asks the other side for a favor could at the same time provide the `@favor accept` button to have the reote party accept it.
+
+![Global Commands](http://i.imgur.com/dqcA5o7.png)
