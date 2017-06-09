@@ -48,6 +48,16 @@ This is unfortunate because if I need to display the same information in both a 
 
 My suggestion would be to provide a pre-built component from the status SDK that does the same formatting a used in `status.sendMessage`. Of course making something explicitly catered for each command is arguably better, having a nice default out of the box might help adoption by allowing faster prototyping.
 
+#### Allow chatbots to send multiple command pills
+
+Currently Status features a limited support for sending `requests`, which is basically a plea for the other side to call a pre-parametrized `command` (such are requesting the other side to send some Ether). This construct is useful for human-to-human interactions, but it's a bit limited for bot-to-human messages.
+
+The limitation for chatbots is that a bot may suggest multiple executable commands in a single chat message to make the information more compact (opposed to sending many messages, each containing one suggestion). In this case it's not possible to make all of the commands actively clickable.
+
+My suggestion would be to allow chatbots to send multiple commands like in the example below, where all of the commands get turned into pills (clickable inline buttons). This way we can preserve the "feel" of chatting with someone while at the same time providing seamless contextual aid. The pills should allow for hidden parameters expanded on click of course.
+
+![ChatBot Pills](http://i.imgur.com/Gl5s4fM.png)
+
 #### Allow deleting synchronized chain data
 
 When setting up multiple emualtors at once, usually some of them started syncing from zero. Not sure why this happened (possibly a bad peer?), but this results in a very slow startup and a lot of disk space. I know that ultimately Geth needs to be smarter here (would appreciate a bug report), but perhaps having some menu to "delete chain data" would help both fix this error as well as possibly clear out old data when a new version of Status is released with a new CHT.
