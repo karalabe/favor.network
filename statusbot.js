@@ -209,7 +209,6 @@ function dropSuggestions(params, context) {
   return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
 }
 
-
 // The requests command list all of my currently open favor requests.
 status.command({
   name: "honour",
@@ -236,7 +235,7 @@ status.command({
         var index = 0;
         if (request[4] != 0) {
           var promises = favornet.getPromiseCount("0x" + context.from);
-          for (var j = 0; j < requests; j++) {
+          for (var j = 0; j < promises; j++) {
             var promise = favornet.getPromiseAt("0x" + context.from, j);
             if (promise[0] == request[4]) {
               index = j;
@@ -248,7 +247,8 @@ status.command({
           if (error) {
             status.sendMessage("Favor request honour denied due to ~" + error + "~.");
           } else {
-            status.sendMessage("Honouring favor request:\nhttps://ropsten.etherscan.io/tx/" + hash)
+            status.sendMessage("Honouring favor requested from " + prettyRequest(request, false));
+            status.sendMessage("https://ropsten.etherscan.io/tx/" + hash);
           }
         });
         break;
@@ -271,21 +271,29 @@ function honourSuggestions(params, context) {
     }
   }
   // Render all the requests into a tapable list
-  var suggestions = honourable.map(function(entry) {
-    return status.components.touchable(
-      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, entry[0]]])},
+  var suggestions = [];
+  for (var i = 0; i < honourable.length; i++) {
+    var entry = [
+      status.components.text({style: {marginBottom: 4, color: "#000", textDecorationLine: "underline"}}, "Honour favor requested from " + honourable[i][1].substring(0, 8) + "…" + honourable[i][1].substring(36, 42)),
+      status.components.text({style: {marginBottom: 4, color: "#000", fontStyle: "italic"}}, honourable[i][2]),
+    ];
+    if (honourable[i][4] == 0) {
+      entry.push(status.components.text({style: {color: "#000"}}, "In exchange for a new promise to return the favor."));
+    } else {
+      var promise = favornet.getPromise(honourable[i][4]);
+      entry.push(status.components.text({style: {marginBottom: 4, color: "#000"}}, "In exchange for a promise from " + promise[1].substring(0, 8) + "…" + promise[1].substring(36, 42)));
+      entry.push(status.components.text({style: {color: "#000", fontStyle: "italic"}}, promise[2]));
+    }
+    suggestions.push(status.components.touchable(
+      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, honourable[i][0]]])},
       status.components.view(
         suggestionsContainerStyle,
         [status.components.view(
-          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4},
-          [
-            status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, entry[1]),
-            status.components.text({style: {fontStyle: "italic"}}, entry[2]),
-          ]
+          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4}, entry
         )]
       )
-    );
-  });
+    ));
+  }
   // Give back the whole thing inside an object.
   return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
 }
