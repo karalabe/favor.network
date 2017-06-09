@@ -1,6 +1,6 @@
 # Favor Network
 
-*"Those who want respect, give respet."* ~Tony Soprano
+*"Those who want respect, give respect."* ~Tony Soprano
 
 The favor network is the ultimate *decentralized* and *trustless* ledger to keep track of personal favors you owe to others and those that others owe to you. Not only does it allow you to honour all the promises you've made, but it gradually builds up a stove of reputation data, giving you an idea how *respectable* someone is when it comes to returning a favor.
 
@@ -10,9 +10,9 @@ The raison d'être of the favor network is to break the one sided relationships 
 
 ## Status Network + Favor Network = :heart:
 
-When was the last time you opened your browser, loaded a website and logged in just to ask your friend something? Probably a long time ago! Most of our day-to-day interactions revolve around chat rooms through our mobile phones. To make tracking favors feasible, it must be invisible yet omnipresent in our discussions. *It must be as simple as plain old asking for it.*
+When was the last time you opened your browser, loaded a website and logged in just to ask your friend something? Probably a long time ago! Most of our day-to-day interactions revolve around chat rooms through our mobile phones. To make tracking favors feasible, it must be invisible yet omnipresent in our discussions. *It must be as simple as plain asking.*
 
-Enter the [Status Network](https://status.im/). On the surface Status seems little more than a mobile messanger application, however it is a fully decentralized end-to-end encrypted communication platform with access to both the Ethereum blockchain as well as the Swarm file system.
+Enter the [Status Network](https://status.im/). On the surface Status seems little more than a mobile messenger application, however it is a fully decentralized end-to-end encrypted communication platform with access to both the Ethereum blockchain as well as the Swarm file system.
 
 By integrating the [Favor Network](https://favor.network/) seamlessly into Status, users can ask, accept and honour favors as seamlessly as sending messages to one another. All of this while preserving privacy (Whisper), guaranteeing correctness (Ethereum) and minimizing consensus costs (Swarm).
 
@@ -42,7 +42,7 @@ The favor network is currently in a proof-of-concept state, glued together for t
 
  * Favor requests are currently uploaded in full to the Ethereum blockchain. This of course entails paying for storage costs proportional to the length of the text. This can be replaced with a Swarm or IPFS based storage when such a feature lands in Status, reducing the storage requirements to 32 bytes (content hash).
  * Favors are currently pushed in plaintext form into the system. This isn't the best idea as it can leak unintended personal details out for all to see. This can however be solved by encrypting the content of the favor client side, and using Whisper built into Status to forward the decryption key to the intended recipient.
- * There is no reputation sustem in place currently. To support this we need an extra functionality of challenging favor requests instead of just being able to honour them. A challenge would entail both parties having a public discussion about the reason of failure. Others would then be able to evaluate on their own whether to trust someone or not.
+ * There is no reputation system in place currently. To support this we need an extra functionality of challenging favor requests instead of just being able to honour them. A challenge would entail both parties having a public discussion about the reason of failure. Others would then be able to evaluate on their own whether to trust someone or not.
 
 The above 3 main features are a must have before the favor network could be considered ready for prime time, but I'm hoping the current reduced feature set is enough to demonstrate the viability of the idea, with the remainder mostly requiring work, work and some more work to implement.
 
@@ -66,8 +66,8 @@ To understand why such a feature would be really powerful, consider the followin
 
  * Alice pings the favor bot to open a new request to Bob
  * A preview is shown, but the transaction is still pending
-   * Bob cannot react until the transction finishes
- * *Transaction executes sucessfully*
+   * Bob cannot react until the transaction finishes
+ * *Transaction executes successfully*
    * *Nobody knows about it, so it's trial and error*
  * **If the favor bot could notify both parties**
    * **Bob could properly react to the request**
@@ -83,8 +83,8 @@ If a chatbot sends a message to the user via `status.sendMessage` which contains
 Beside fixing the issue so that format modifiers don't break URL detection, I'd venture into suggesting support for a few more modifiers:
 
  * Explicitly mark a URL as such, perhaps supporting an alternate display string. You could make this feature only available for chat bots but not for users so users can't spoof links but chatbots can display short and sweet versions.
- * Explicitly mark an Ethereum address as such, shortening the display to `0x123456...000000` for example, and creating a tapable `@browse https://etherscan.io/address/0x...` link out of it. The hash could be extended with a contact's name if it's an address known to us.
- * Explicitly mark an Ethereum transaction and block hash as such, shortening and linking them to a block explorer. Perhaps a visual que could also be used to differentiate between the two (note, differentiation cannot be done automatically, it needs a hint from the creator of the message).
+ * Explicitly mark an Ethereum address as such, shortening the display to `0x123456...000000` for example, and creating a tappable `@browse https://etherscan.io/address/0x...` link out of it. The hash could be extended with a contact's name if it's an address known to us.
+ * Explicitly mark an Ethereum transaction and block hash as such, shortening and linking them to a block explorer. Perhaps a visual cue could also be used to differentiate between the two (note, differentiation cannot be done automatically, it needs a hint from the creator of the message).
 
 #### Allow formatting modifiers in command previews
 
@@ -106,7 +106,7 @@ My suggestion would be to allow chatbots to send multiple commands like in the e
 
 #### Allow deleting synchronized chain data
 
-When setting up multiple emualtors at once, usually some of them started syncing from zero. Not sure why this happened (possibly a bad peer?), but this results in a very slow startup and a lot of disk space. I know that ultimately Geth needs to be smarter here (would appreciate a bug report), but perhaps having some menu to "delete chain data" would help both fix this error as well as possibly clear out old data when a new version of Status is released with a new CHT.
+When setting up multiple emulators at once, usually some of them started syncing from zero. Not sure why this happened (possibly a bad peer?), but this results in a very slow startup and a lot of disk space. I know that ultimately Geth needs to be smarter here (would appreciate a bug report), but perhaps having some menu to "delete chain data" would help both fix this error as well as possibly clear out old data when a new version of Status is released with a new CHT.
 
 #### Various failures around global commands
 
@@ -114,6 +114,6 @@ If a chatbot provides a global command, that can be called via `@botname` in hum
 
 The formatting also almost always fails on the remote side. It may have something to do with `TEXT` parameters containing spaces. Very rarely I managed to have it properly formatted, but generally it just displays a JSON dump on the remote side.
 
-Lastly global commands cannot be currently used as `response` requests. It would be nice to support this use case becase then in the below example my speach bubble that asks the other side for a favor could at the same time provide the `@favor accept` button to have the reote party accept it.
+Lastly global commands cannot be currently used as `response` requests. It would be nice to support this use case because then in the below example my speech bubble that asks the other side for a favor could at the same time provide the `@favor accept` button to have the remote party accept it.
 
 ![Global Commands](http://i.imgur.com/dqcA5o7.png)
