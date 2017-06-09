@@ -15,10 +15,6 @@ var favornetABI = [{"constant":false,"inputs":[{"name":"index","type":"uint256"}
 // favornet is a live contract interface into the Favor Network.
 var favornet = web3.eth.contract(favornetABI).at(favornetAddress);
 
-// address is the user's Ethereum address. We need to pull in out because it's
-// contexts providing it are not accessible in suggestions...
-var address;
-
 // suggestionsContainerStyle is a simple style to make displaying suggestions
 // nicer.
 function suggestionsContainerStyle(count) {
@@ -33,21 +29,37 @@ function suggestionsContainerStyle(count) {
   };
 }
 
+// prettyRequest formats a favor request so it's displayed in a pleasant way
+// when the chatbot sends it to the user.
+var prettyRequest = function(request, accept) {
+  // Format the favor reward (either a new promise or an existing pledge)
+  var reward = " a *new promise* to return the favor";
+  if (request[4] != 0) {
+    // An existing pledge was offered as a reward, gather its details
+    var promise = favornet.GetPromise(request[4]);
+    reward = "\n\n~" + promise[2] + "~\n\nfrom *" + promise[1].substring(0, 8) + "…" + promise[1].substring(36, 42) + "*";
+  }
+  // Format the request along with the above reward
+  var meta = " for";
+  if (accept) {
+    meta = "";
+  }
+  return "*" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*" + meta + "\n\n~" + request[2] + "~\n\nin exchange for" + reward + ".";
+}
+
 // The init listener simply pushes some nice messages to the user to make the
 // whole experience a bit friendlier.
-status.addListener("init",
-  function (params, context) {
-    address = context.from;
-
-    status.sendMessage("~\"Those who want respect, give respect\"~ ~Tony Soprano");
-    status.sendMessage("Never forget a favor; and never break a promise. Reputation is above all. We'll make sure of it!");
-    status.sendMessage("I can list the favors you */asked* from others and those */owed* to you by others.");
+status.addListener("init", function (params, context) {
+  status.sendMessage("~\"Those who want respect, give respect\"~ ~Tony Soprano");
+  status.sendMessage("Never forget a favor; and never break a promise. Reputation is above all. We'll make sure of it!");
+  status.sendMessage("I can list the favors you */asked* from others and those */owed* to you by others.");
 });
 
 // The asking command lists all currently open favor requests asked by the user
 // from others. They may already be accepted, or just under consideration.
 status.command({
   name: "asked",
+  title: "Favors Asked",
   description: "Lists the favors asked from others",
   color: "#2c3e50",
   preview: function (params, context) {
@@ -68,12 +80,7 @@ status.command({
       if (request[3]) {
         state = "They have *accepted* the favor request, you can only */honour* or */challenge* it."
       }
-      var reward = " a *new promise* to return the favor";
-      if (request[4] != 0) {
-        var promise = favornet.GetPromise(request[4]);
-        reward = "\n\n~" + promise[2] + "~\n\nfrom *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "*."
-      }
-      status.sendMessage("Asked *" + request[1].substring(0, 8) + "…" + request[1].substring(36, 42) + "* for\n\n~" + request[2] + "~\n\nin exchange for" + reward + ".\n\n" + state);
+      status.sendMessage("Asked " + prettyRequest(request, false) + "\n\n" + state);
     }
   }
 });
@@ -82,6 +89,7 @@ status.command({
 // The favor promises may already be offered as a reward to some user request.
 status.command({
   name: "owed",
+  title: "Favors Owed",
   description: "Lists the favors owed by others",
   color: "#2c3e50",
   preview: function (params, context) {
@@ -110,17 +118,17 @@ status.command({
 // The requests command list all of my currently open favor requests.
 status.command({
   name: "drop",
-  title: "Drop",
-  description: "Drops an unaccepted favor request",
+  title: "Drop Item",
+  description: "Drops a request or a promise",
   color: "#2c3e50",
   params: [{
     name: "id",
     type: status.types.TEXT,
-    placeholder: "Request ID to drop"
+    placeholder: "Request or promise ID to drop"
     suggestions: dropSuggestions,
   }]
   preview: function (params, context) {
-    var text = status.components.text({}, "Please drop request #" + params.id);
+    var text = status.components.text({}, "Please drop favor #" + params.id);
     return {markup: status.components.view({}, [text])};
   },
   handler: function (params, context) {
@@ -133,25 +141,52 @@ status.command({
           if (error) {
             status.sendMessage("Favor request drop denied due to ~" + error + "~.");
           } else {
-            status.sendMessage("Dropping favor request:\nhttps://ropsten.etherscan.io/tx/" + hash)
+            status.sendMessage("Dropping favor request asked from " + prettyRequest(request, false));
+            status.sendMessage("https://ropsten.etherscan.io/tx/" + hash)
           }
         });
+        return;
       }
     }
+    // Find the promise of the given ID and issue a transaction to drop it
+    var promises = favornet.GetPromiseCount("0x" + context.from);
+    for (var i = 0; i < promises; i++) {
+      var promise = favornet.GetPromiseAt("0x" + context.from, i);
+      if (promise[0] == params.id) {
+        favornet.DropPromise.sendTransaction(i, params.id, {from: context.from}, function (error, hash) {
+          if (error) {
+            status.sendMessage("Favor promise drop denied due to ~" + error + "~.");
+          } else {
+            status.sendMessage("Dropping favor promise owed by *" + promise[2].substring(0, 8) + "…" + promise[2].substring(36, 42) + "* for: \n\n~" + promise[3] + "~")
+            status.sendMessage("https://ropsten.etherscan.io/tx/" + hash)
+          }
+        });
+        return;
+      }
+    }
+    // Something went wrong, notify the user
+    status.sendMessage("Could not find a favor request or promise with that id number.");
   }
 });
 
 // dropSuggestions pre-fills the suggestion box with unaccepted favor requests
 // that the user may drop out of the block-chain.
-function dropSuggestions() {
-  // Find all the dropable favor requests
-  var requests = favornet.GetRequestCount("0x" + address);
-
+function dropSuggestions(params, context) {
+  // Find all the dropable favor requests or promises
   var dropable = [];
+
+  var requests = favornet.GetRequestCount("0x" + context.from);
   for (var i = 0; i < requests; i++) {
-    var request = favornet.GetRequestAt("0x" + address, i);
+    var request = favornet.GetRequestAt("0x" + context.from, i);
     if (!request[3]) {
       dropable.push(request);
+    }
+  }
+  var promises = favornet.GetPromiseCount("0x" + context.from);
+  for (var i = 0; i < promises; i++) {
+    var promise = favornet.GetPromiseAt("0x" + context.from, i);
+    if (!promise[4]) {
+      dropable.push(promise);
     }
   }
   // Render all the requests into a tapable list
@@ -224,13 +259,13 @@ status.command({
 
 // honourSuggestions pre-fills the suggestion box with accepted favor requests
 // that the user may honour with a promise.
-function honourSuggestions() {
+function honourSuggestions(params, context) {
   // Find all the honourable favor requests
-  var requests = favornet.GetRequestCount("0x" + address);
+  var requests = favornet.GetRequestCount("0x" + context.from);
 
   var honourable = [];
   for (var i = 0; i < requests; i++) {
-    var request = favornet.GetRequestAt("0x" + address, i);
+    var request = favornet.GetRequestAt("0x" + context.from, i);
     if (request[3]) {
       honourable.push(request);
     }
@@ -294,7 +329,9 @@ status.command({
         if (error) {
           status.sendMessage("Favor request denied due to ~" + error + "~.");
         } else {
-          status.sendMessage("Asked *0x" + context.to.substring(0, 6) + "…" + context.to.substring(34, 40) + "* for\n\n~" + params.favor + "~\n\nhttps://ropsten.etherscan.io/tx/" + hash)
+          var request = [0, "0x" + context.to, params.favor, false, reward];
+          status.sendMessage("Asked " + prettyRequest(request, false));
+          status.sendMessage("https://ropsten.etherscan.io/tx/" + hash)
         }
       });
       return;
@@ -310,9 +347,12 @@ status.command({
           if (error) {
             status.sendMessage("Favor request acceptance denied due to ~" + error + "~.");
           } else {
-            status.sendMessage("Accepted *0x" + context.to.substring(0, 6) + "…" + context.to.substring(34, 40) + "*:\n\n~" + request[2] + "~\n\nhttps://ropsten.etherscan.io/tx/" + hash)
+            request[1] = "0x" + context.to;
+            status.sendMessage("Accepted " + prettyRequest(request, true));
+            status.sendMessage("https://ropsten.etherscan.io/tx/" + hash);
           }
         });
+        return;
       }
     }
   }
@@ -368,11 +408,11 @@ function globalSuggestions(params, context) {
     )
   ));
   // Find all the giftable favor promises
-  var promises = favornet.GetPromiseCount("0x" + address);
+  var promises = favornet.GetPromiseCount("0x" + context.from);
 
   var giftable = [];
   for (var i = 0; i < promises; i++) {
-    var promise = favornet.GetPromiseAt("0x" + address, i);
+    var promise = favornet.GetPromiseAt("0x" + context.from, i);
     if (!promise[4]) {
       giftable.push(promise);
     }
