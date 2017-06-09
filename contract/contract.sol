@@ -87,6 +87,10 @@ contract Favornet {
       throw;
     }
     // All checks passed, get rid of the favor request
+    uint reward = requests[id].Reward;
+    if (reward != 0) {
+        promises[reward].Offered = false;
+    }
     liabilities[msg.sender][index] = liabilities[msg.sender][count-1];
     liabilities[msg.sender].length--;
     delete(requests[id]);

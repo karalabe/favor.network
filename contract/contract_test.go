@@ -257,12 +257,9 @@ func TestRequestHonouring(t *testing.T) {
 	}
 	// Repeat the same test but with the existing promise as a reward
 	{
-		// Create a request with Bob and bind it with Alice. Note, we set a reward now too!
+		// Create a request with Bob
 		if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(bob), crypto.PubkeyToAddress(alice.PublicKey), "Hello, Favor 2!", big.NewInt(1)); err != nil {
 			t.Fatalf("failed to create favor request transaction: %v", err)
-		}
-		if _, err := favornet.AcceptRequest(bind.NewKeyedTransactor(alice), crypto.PubkeyToAddress(bob.PublicKey), big.NewInt(0), big.NewInt(2)); err != nil {
-			t.Fatalf("failed to create acceptance transaction: %v", err)
 		}
 		sim.Commit()
 
@@ -288,6 +285,26 @@ func TestRequestHonouring(t *testing.T) {
 		} else if reqs.Uint64() != uint64(1) {
 			t.Fatalf("promise count mismatch: have %v, want %v", reqs, 1)
 		}
+		// Make sure droppig the request unlocks the reward
+		if _, err := favornet.DropRequest(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(2)); err != nil {
+			t.Fatalf("failed to create promise drop transaction: %v", err)
+		}
+		sim.Commit()
+
+		if prom, err := favornet.GetPromise(nil, big.NewInt(1)); err != nil {
+			t.Fatalf("failed to retrieve backtracked promise: %v", err)
+		} else if prom.Offered {
+			t.Fatalf("backtracked promise still on offer")
+		}
+		// Recreate the request with Bob and bind it with Alice
+		if _, err := favornet.MakeRequest(bind.NewKeyedTransactor(bob), crypto.PubkeyToAddress(alice.PublicKey), "Hello, Favor 4!", big.NewInt(1)); err != nil {
+			t.Fatalf("failed to create favor request transaction: %v", err)
+		}
+		if _, err := favornet.AcceptRequest(bind.NewKeyedTransactor(alice), crypto.PubkeyToAddress(bob.PublicKey), big.NewInt(0), big.NewInt(3)); err != nil {
+			t.Fatalf("failed to create acceptance transaction: %v", err)
+		}
+		sim.Commit()
+
 		// Make sure Alice has no promises from others before an honour is made
 		if proms, err := favornet.GetPromiseCount(nil, crypto.PubkeyToAddress(alice.PublicKey)); err != nil {
 			t.Fatalf("failed to retrieve promise count: %v", err)
@@ -295,7 +312,7 @@ func TestRequestHonouring(t *testing.T) {
 			t.Fatalf("promise count mismatch: have %v, want %v", proms, 0)
 		}
 		// Close the request and verify the creation of a new promise to honour it
-		if _, err := favornet.HonourRequest(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(2), big.NewInt(0)); err != nil {
+		if _, err := favornet.HonourRequest(bind.NewKeyedTransactor(bob), big.NewInt(0), big.NewInt(3), big.NewInt(0)); err != nil {
 			t.Fatalf("failed to create favor honour transaction: %v", err)
 		}
 		sim.Commit()
