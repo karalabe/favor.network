@@ -4,7 +4,7 @@ start-emulators:
 	@echo "Starting Android emulators..."
 	$(ANDROID_HOME)/tools/emulator -avd Peter  > /dev/null 2> /dev/null &
 	$(ANDROID_HOME)/tools/emulator -avd Jarrad > /dev/null 2> /dev/null &
-	$(ANDROID_HOME)/tools/emulator -avd Nick   > /dev/null 2> /dev/null &
+	$(ANDROID_HOME)/tools/emulator -avd Alex   > /dev/null 2> /dev/null &
 
 deploy-status:
 	@echo "Starting Android emulators..."
