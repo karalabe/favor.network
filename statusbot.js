@@ -120,6 +120,7 @@ status.command({
   name: "drop",
   title: "Drop Item",
   description: "Drops a request or a promise",
+  fullscreen: true,
   color: "#2c3e50",
   params: [{
     name: "id",
@@ -141,7 +142,7 @@ status.command({
           if (error) {
             status.sendMessage("Favor request drop denied due to ~" + error + "~.");
           } else {
-            status.sendMessage("Dropping favor request asked from " + prettyRequest(request, false));
+            status.sendMessage("Dropping favor request asked of " + prettyRequest(request, false));
             status.sendMessage("https://ropsten.etherscan.io/tx/" + hash)
           }
         });
@@ -172,39 +173,67 @@ status.command({
 // dropSuggestions pre-fills the suggestion box with unaccepted favor requests
 // that the user may drop out of the block-chain.
 function dropSuggestions(params, context) {
-  // Find all the dropable favor requests or promises
-  var dropable = [];
-
+  // Find all the droppable favor requests
   var requests = favornet.getRequestCount("0x" + context.from);
+
+  var droppable = [];
   for (var i = 0; i < requests; i++) {
     var request = favornet.getRequestAt("0x" + context.from, i);
     if (!request[3]) {
-      dropable.push(request);
+      droppable.push(request);
     }
   }
+  // Flatten the droppable favor requests into suggestions
+  var suggestions = [];
+
+  for (var i = 0; i < droppable.length; i++) {
+    var entry = [
+      status.components.text({style: {marginBottom: 4, color: "#000", textDecorationLine: "underline"}}, "Drop favor request asked of " + droppable[i][1].substring(0, 8) + "…" + droppable[i][1].substring(36, 42)),
+      status.components.text({style: {marginBottom: 4, color: "#000", fontStyle: "italic"}}, droppable[i][2]),
+    ];
+    if (droppable[i][4] == 0) {
+      entry.push(status.components.text({style: {color: "#000"}}, "In exchange for a new promise to return the favor."));
+    } else {
+      var promise = favornet.getPromise(droppable[i][4]);
+      entry.push(status.components.text({style: {marginBottom: 4, color: "#000"}}, "In exchange for a promise from " + promise[1].substring(0, 8) + "…" + promise[1].substring(36, 42)));
+      entry.push(status.components.text({style: {color: "#000", fontStyle: "italic"}}, promise[2]));
+    }
+    suggestions.push(status.components.touchable(
+      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, droppable[i][0]]])},
+      status.components.view(
+        suggestionsContainerStyle,
+        [status.components.view(
+          {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4}, entry
+        )]
+      )
+    ));
+  }
+  // Find all the droppable favor promises
   var promises = favornet.getPromiseCount("0x" + context.from);
+
+  droppable = [];
   for (var i = 0; i < promises; i++) {
     var promise = favornet.getPromiseAt("0x" + context.from, i);
     if (!promise[4]) {
-      dropable.push(promise);
+      droppable.push(promise);
     }
   }
-  // Render all the requests into a tapable list
-  var suggestions = dropable.map(function(entry) {
-    return status.components.touchable(
-      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, entry[0]]])},
+  // Flatten the droppable favor promises into suggestions
+  for (var i = 0; i < droppable.length; i++) {
+    suggestions.push(status.components.touchable(
+      {onPress: status.components.dispatch([status.events.SET_COMMAND_ARGUMENT, [0, droppable[i][0]]])},
       status.components.view(
         suggestionsContainerStyle,
         [status.components.view(
           {borderWidth: 1, borderColor: "#0000001f", borderRadius: 4, margin: 4, padding: 4},
           [
-            status.components.text({style: {fontWeight: "bold", marginBottom: 4}}, entry[1]),
-            status.components.text({style: {fontStyle: "italic"}}, entry[2]),
+            status.components.text({style: {marginBottom: 4, color: "#000", textDecorationLine: "underline"}}, "Drop favor promise from " + droppable[i][2].substring(0, 8) + "…" + droppable[i][2].substring(36, 42)),
+            status.components.text({style: {color: "#000", fontStyle: "italic"}}, droppable[i][3]),
           ]
         )]
       )
-    );
-  });
+    ));
+  }
   // Give back the whole thing inside an object.
   return {markup: status.components.scrollView(suggestionsContainerStyle(suggestions.length), suggestions)};
 }
