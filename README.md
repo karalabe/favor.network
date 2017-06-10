@@ -16,7 +16,7 @@ Enter the [Status Network](https://status.im/). On the surface Status seems litt
 
 By integrating the [Favor Network](https://favor.network/) seamlessly into Status, users can ask, accept and honour favors as seamlessly as sending messages to one another. All of this while preserving privacy (Whisper), guaranteeing correctness (Ethereum) and minimizing consensus costs (Swarm).
 
-[![Favor Network](https://img.youtube.com/vi/lO4AsBTiXB8/0.jpg)](https://www.youtube.com/watch?v=lO4AsBTiXB8)
+[![Favor Network](https://img.youtube.com/vi/kelAI6MlICA/0.jpg)](https://www.youtube.com/watch?v=kelAI6MlICA)
 
 ## Try it out yourself
 
@@ -35,6 +35,8 @@ $ status-dev-cli add '{"whisper-identity":"favor", "name":"Favor Network", "bot-
 ```
 
 If everything went well, the favor network chatbot should be open on your Status messenger app, greeting you with a mobster quote and giving a few hints on how to start. Feel free to open a human-to-human chat and start running `@favor`s between your accounts. Whenever you're wondering what's happening, switch back to the bot and you'll find all the events there.
+
+*The favor network on Ropsten is deployed at [`0xd1ee90c67ab3cedd911773b193617b6ecac6bf7a`](https://ropsten.etherscan.io/address/0xd1ee90c67ab3cedd911773b193617b6ecac6bf7a).*
 
 ## Missing features
 
